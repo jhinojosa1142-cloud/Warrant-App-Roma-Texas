@@ -11,7 +11,6 @@
       --rpd-silver: #e0e0e0;
       --danger: #b00020;
       --text-dark: #1a1a1a;
-      --success: #2e7d32;
     }
 
     body {
@@ -27,10 +26,10 @@
       color: white;
       padding: 1.5rem;
       border-bottom: 4px solid var(--rpd-gold);
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       display: flex;
       flex-direction: column;
       align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
 
     .header-logo {
@@ -68,7 +67,7 @@
       background-color: var(--rpd-blue);
       color: white;
       border: none;
-      padding: 0.7rem;
+      padding: 0.7rem 1.5rem;
       border-radius: 4px;
       font-weight: bold;
       cursor: pointer;
@@ -78,22 +77,19 @@
 
     .status-msg { text-align: center; padding: 1rem; font-weight: bold; display: none; }
 
-    /* Contenedor de tabla optimizado para muchas columnas */
     .results-container { 
       background: white; 
       border-radius: 8px; 
-      overflow-x: auto; /* Permite scroll horizontal en móviles/laptops pequeñas */
+      overflow-x: auto; 
       box-shadow: 0 2px 15px rgba(0,0,0,0.1); 
     }
 
-    table { width: 100%; border-collapse: collapse; min-width: 1000px; /* Asegura que las columnas no se colapsen */ }
+    table { width: 100%; border-collapse: collapse; min-width: 1100px; }
     thead { background-color: var(--rpd-blue); color: white; }
     th { padding: 0.8rem; text-align: left; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid var(--rpd-gold); }
     td { padding: 0.8rem; text-align: left; border-bottom: 1px solid var(--rpd-silver); font-size: 0.85rem; }
     
     tr:nth-child(even) { background-color: #f8f9fa; }
-    tr:hover { background-color: #f1f4f7; }
-
     .balance-red { color: var(--danger); font-weight: bold; }
 
     footer { text-align: center; padding: 2rem; font-size: 0.75rem; color: #666; }
@@ -161,17 +157,42 @@
     const SHEET_ID = '1k_cpfT-NwDUT3-6kAoVwasAOYqaokSpa'; 
     const CSV_URL = `https://docs.google.com/spreadsheets/d/e/2PACX-1vQQPoeUZ2RT_fk_-SV9-vc93gjcdXkhDInrq_GQVCV7x9h-WXTl_NdQSNbz8vHlPQ/pub?gid=742505887&single=true&output=csv`;
 
+    // Normalización robusta: Quita ceros y limpia comillas/espacios
     function normalizeDate(dateStr) {
       if (!dateStr) return "";
-      if (dateStr.includes('-')) {
-        const [year, month, day] = dateStr.split('-');
-        return `${parseInt(month)}/${parseInt(day)}/${year}`;
+      
+      let cleanStr = dateStr.replace(/"/g, '').trim();
+      
+      // Caso HTML5: 1990-07-12
+      if (cleanStr.includes('-')) {
+        const parts = cleanStr.split('-');
+        return `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0]}`;
       }
-      const parts = dateStr.split('/');
-      if (parts.length === 3) {
-        return `${parseInt(parts[0])}/${parseInt(parts[1])}/${parts[2]}`;
+      
+      // Caso Sheet: 07/12/1990 o 7/12/1990
+      if (cleanStr.includes('/')) {
+        const parts = cleanStr.split('/');
+        if (parts.length === 3) {
+          return `${parseInt(parts[0])}/${parseInt(parts[1])}/${parts[2]}`;
+        }
       }
-      return dateStr.trim();
+      return cleanStr;
+    }
+
+    // Función para procesar filas de CSV respetando comas dentro de comillas
+    function parseCSVLine(line) {
+      const result = [];
+      let curValue = "";
+      let inQuotes = false;
+      for (let char of line) {
+        if (char === '"') inQuotes = !inQuotes;
+        else if (char === ',' && !inQuotes) {
+          result.push(curValue);
+          curValue = "";
+        } else curValue += char;
+      }
+      result.push(curValue);
+      return result;
     }
 
     document.getElementById('searchForm').addEventListener('submit', async function(e) {
@@ -187,7 +208,7 @@
       
       status.style.display = 'block';
       status.style.color = 'var(--rpd-blue)';
-      status.textContent = "SEARCHING 10,000+ RECORDS...";
+      status.textContent = "SEARCHING DATABASE...";
       resultsBody.innerHTML = '';
 
       try {
@@ -195,16 +216,15 @@
         if (!response.ok) throw new Error("Connection failed.");
         
         const data = await response.text();
-        // Usamos una expresión regular para manejar comas dentro de comillas en el CSV
-        const rows = data.split('\n').map(row => row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || []);
+        const lines = data.split(/\r?\n/);
 
-        const filtered = rows.filter((row, index) => {
-          if (index === 0) return false; 
+        const filtered = lines.slice(1).filter(line => {
+          if (!line.trim()) return false;
+          const columns = parseCSVLine(line);
           
-          const rowLName = (row[1] || '').trim().toUpperCase().replace(/"/g, '');
-          const rowFName = (row[2] || '').trim().toUpperCase().replace(/"/g, '');
-          const rowDOB_Raw = (row[3] || '').trim().replace(/"/g, '');
-          const rowDOB_Normalized = normalizeDate(rowDOB_Raw);
+          const rowLName = (columns[1] || '').trim().toUpperCase();
+          const rowFName = (columns[2] || '').trim().toUpperCase();
+          const rowDOB_Normalized = normalizeDate(columns[3] || '');
 
           const matchLName = rowLName.includes(searchLName);
           const matchFName = searchFName === "" || rowFName.includes(searchFName);
@@ -218,19 +238,18 @@
         if (filtered.length === 0) {
           resultsBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--danger); padding: 2rem;">NO MATCHING RECORDS FOUND</td></tr>';
         } else {
-          filtered.forEach(row => {
+          filtered.forEach(line => {
+            const columns = parseCSVLine(line);
             const tr = document.createElement('tr');
-            // Iteramos por las 9 columnas (A a I)
             for(let i=0; i<9; i++) {
               const td = document.createElement('td');
-              let content = (row[i] || '').trim().replace(/"/g, '');
+              let val = (columns[i] || '').trim();
               
-              // Si es la columna de Balance (I / índice 8), le damos formato rojo si hay deuda
-              if (i === 8 && content !== "0" && content !== "") {
+              if (i === 8 && val !== "0" && val !== "") {
                 td.classList.add('balance-red');
-                td.textContent = "" + content;
+                td.textContent = val.startsWith('$') ? val : "$" + val;
               } else {
-                td.textContent = content;
+                td.textContent = val;
               }
               tr.appendChild(td);
             }
@@ -239,7 +258,7 @@
         }
       } catch (error) {
         status.style.color = 'var(--danger)';
-        status.textContent = "SYSTEM ERROR: ACCESS DENIED OR TIMEOUT";
+        status.textContent = "SYSTEM ERROR: DATA COULD NOT BE LOADED";
       }
     });
   </script>
