@@ -228,7 +228,7 @@
               // Si es la columna de Balance (I / índice 8), le damos formato rojo si hay deuda
               if (i === 8 && content !== "0" && content !== "") {
                 td.classList.add('balance-red');
-                td.textContent = "$" + content;
+                td.textContent = "" + content;
               } else {
                 td.textContent = content;
               }
