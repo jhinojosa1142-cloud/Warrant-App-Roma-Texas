@@ -27,6 +27,7 @@
       padding: 1.5rem;
       border-bottom: 4px solid var(--rpd-gold);
       text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
 
     .main-content {
@@ -64,6 +65,7 @@
       padding: 0.8rem;
       border: 2px solid var(--rpd-silver);
       border-radius: 4px;
+      font-size: 1rem;
     }
 
     .btn-search {
@@ -75,25 +77,38 @@
       font-weight: bold;
       cursor: pointer;
       text-transform: uppercase;
+      transition: background 0.3s;
+    }
+
+    .btn-search:hover { background: #003366; }
+
+    .status-msg {
+      text-align: center;
+      padding: 1rem;
+      font-weight: bold;
+      display: none;
+    }
+
+    .results-container {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 15px rgba(0,0,0,0.1);
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
     }
 
     thead { background-color: var(--rpd-blue); color: white; }
     th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--rpd-silver); }
 
-    .loader {
-      display: none;
+    footer {
       text-align: center;
       padding: 2rem;
-      font-weight: bold;
-      color: var(--rpd-blue);
+      font-size: 0.8rem;
+      color: #666;
     }
   </style>
 </head>
@@ -101,7 +116,7 @@
 
   <header>
     <h1>CITY OF ROMA POLICE DEPARTMENT</h1>
-    <p>Warrant Inquiry System | Internal Use Only</p>
+    <p>Official Warrant Inquiry System | Internal Use Only</p>
   </header>
 
   <main class="main-content">
@@ -109,95 +124,113 @@
       <form id="searchForm">
         <div class="search-grid">
           <div class="field-group">
-            <label for="firstName">First Name</label>
-            <input type="text" id="firstName" required>
+            <label for="lastName">Last Name (Col B)</label>
+            <input type="text" id="lastName" placeholder="Required" required>
           </div>
           <div class="field-group">
-            <label for="lastName">Last Name</label>
-            <input type="text" id="lastName" required>
+            <label for="firstName">First Name (Col C)</label>
+            <input type="text" id="firstName" placeholder="Optional">
           </div>
           <div class="field-group">
             <label for="dob">Date of Birth</label>
-            <input type="date" id="dob" required>
+            <input type="date" id="dob">
           </div>
-          <button type="submit" class="btn-search">Run Query</button>
+          <button type="submit" class="btn-search">Search Database</button>
         </div>
       </form>
     </section>
 
-    <div id="loader" class="loader">ACCESSING SECURE DATABASE...</div>
+    <div id="statusMsg" class="status-msg"></div>
 
-    <section style="overflow-x: auto;">
-      <table id="resultsTable">
+    <section class="results-container" style="overflow-x: auto;">
+      <table>
         <thead>
           <tr>
-            <th>Warrant #</th>
-            <th>Subject</th>
+            <th>Warrant ID</th>
+            <th>Last Name</th>
+            <th>First Name</th>
             <th>D.O.B.</th>
-            <th>Charge</th>
+            <th>Offense</th>
             <th>Status</th>
           </tr>
         </thead>
         <tbody id="resultsBody">
-          <tr><td colspan="5" style="text-align:center;">Enter subject details to begin.</td></tr>
+          <tr><td colspan="6" style="text-align:center;">Awaiting search parameters...</td></tr>
         </tbody>
       </table>
     </section>
   </main>
 
-  <script>
-    // 1. CONFIGURATION
-    const SHEET_ID = '1k_cpfT-NwDUT3-6kAoVwasAOYqaokSpa'; // Replace with your actual ID
-    const SHEET_NAME = 'Sheet1'; // Name of the tab in Google Sheets
+  <footer>
+    <strong>LAW ENFORCEMENT SENSITIVE</strong><br>
+    City of Roma, TX Police Department &copy; 2026
+  </footer>
 
-    document.getElementById('searchForm').addEventListener('submit', function(e) {
+  <script>
+    // 1. YOUR CONFIGURATION
+    const SHEET_ID = '1k_cpfT-NwDUT3-6kAoVwasAOYqaokSpa'; 
+    const CSV_URL = `https://docs.google.com/spreadsheets/d/e/2PACX-1vQQPoeUZ2RT_fk_-SV9-vc93gjcdXkhDInrq_GQVCV7x9h-WXTl_NdQSNbz8vHlPQ/pub?gid=742505887&single=true&output=csv`;
+
+    document.getElementById('searchForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       
-      const fName = document.getElementById('firstName').value.toUpperCase();
-      const lName = document.getElementById('lastName').value.toUpperCase();
-      const dob = document.getElementById('dob').value;
+      const searchLName = document.getElementById('lastName').value.trim().toUpperCase();
+      const searchFName = document.getElementById('firstName').value.trim().toUpperCase();
+      const searchDOB = document.getElementById('dob').value;
       
-      const loader = document.getElementById('loader');
+      const status = document.getElementById('statusMsg');
       const resultsBody = document.getElementById('resultsBody');
       
-      loader.style.display = 'block';
+      status.style.display = 'block';
+      status.style.color = 'var(--rpd-blue)';
+      status.textContent = "CONNECTING TO SECURE DATABASE...";
       resultsBody.innerHTML = '';
 
-      // 2. THE QUERY (SQL-style)
-      // Change column letters (A, B, C) to match your Sheet columns
-      // Example: A=WarrantID, B=FirstName, C=LastName, D=DOB, E=Charge, F=Status
-      const query = encodeURIComponent(`SELECT A, B, C, D, E, F WHERE (upper(B) contains '${fName}' AND upper(C) contains '${lName}') OR D = date '${dob}'`);
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${SHEET_NAME}`;
+      try {
+        const response = await fetch(CSV_URL);
+        if (!response.ok) throw new Error("Could not reach Google Sheets. Check permissions.");
+        
+        const data = await response.text();
+        const rows = data.split('\n').map(row => row.split(','));
 
-      fetch(url)
-        .then(res => res.text())
-        .then(data => {
-          // Remove Google's JSON wrapper
-          const json = JSON.parse(data.substring(47, data.length - 2));
-          const rows = json.table.rows;
+        // Filtering logic:
+        // Index 1 = Col B (Last Name), Index 2 = Col C (First Name), Index 3 = Col D (DOB)
+        const filtered = rows.filter((row, index) => {
+          if (index === 0) return false; // Skip header row
           
-          loader.style.display = 'none';
-          
-          if (rows.length === 0) {
-            resultsBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">NO RECORDS FOUND</td></tr>';
-            return;
-          }
+          const rowLName = (row[1] || '').trim().toUpperCase();
+          const rowFName = (row[2] || '').trim().toUpperCase();
+          const rowDOB = (row[3] || '').trim(); // Adjust index if DOB is not in Col D
 
-          rows.forEach(row => {
+          const matchLName = rowLName.includes(searchLName);
+          const matchFName = searchFName === "" || rowFName.includes(searchFName);
+          const matchDOB = searchDOB === "" || rowDOB.includes(searchDOB);
+
+          return matchLName && matchFName && matchDOB;
+        });
+
+        status.style.display = 'none';
+
+        if (filtered.length === 0) {
+          resultsBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--danger);">NO MATCHING RECORDS FOUND</td></tr>';
+        } else {
+          filtered.forEach(row => {
             const tr = document.createElement('tr');
-            row.c.forEach(cell => {
+            // Show only first 6 columns
+            for(let i=0; i<6; i++) {
               const td = document.createElement('td');
-              td.textContent = cell ? cell.v : '';
+              td.textContent = (row[i] || '').replace(/"/g, ''); // Remove quotes from CSV
               tr.appendChild(td);
-            });
+            }
             resultsBody.appendChild(tr);
           });
-        })
-        .catch(err => {
-          loader.style.display = 'none';
-          resultsBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Error connecting to database.</td></tr>';
-          console.error(err);
-        });
+        }
+
+      } catch (error) {
+        status.style.color = 'var(--danger)';
+        status.textContent = "ERROR: " + error.message;
+        console.error(error);
+      }
     });
   </script>
 </body>
