@@ -21,48 +21,29 @@
       min-height: 100vh;
     }
 
-    /* Header actualizado con Flexbox para centrar y alinear logo/texto */
     header {
       background-color: var(--rpd-blue);
       color: white;
-      padding: 2rem 1.5rem; /* Aumentado padding para dar espacio al logo */
+      padding: 2rem 1.5rem;
       border-bottom: 4px solid var(--rpd-gold);
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
       display: flex;
       flex-direction: column;
-      align-items: center; /* Centra horizontalmente todo el contenido */
+      align-items: center;
       justify-content: center;
     }
 
-    /* Estilos específicos para el logo en 3D */
     .header-logo {
-      max-width: 250px; /* Tamaño máximo para que no sea intrusivo */
-      height: auto; /* Mantiene la proporción 3D */
-      margin-bottom: 1.5rem; /* Espacio entre el logo y el título h1 */
-      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); /* Sombra para resaltar el 3D */
+      max-width: 200px;
+      height: auto;
+      margin-bottom: 1.5rem;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
     }
 
-    header h1 {
-      margin: 0;
-      font-size: 1.8rem;
-      letter-spacing: 1px;
-      font-weight: 800;
-      text-align: center;
-    }
+    header h1 { margin: 0; font-size: 1.8rem; text-align: center; }
+    header p { margin: 5px 0 0; opacity: 0.9; font-size: 0.9rem; text-transform: uppercase; }
 
-    header p {
-      margin: 5px 0 0;
-      opacity: 0.9;
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      text-align: center;
-    }
-
-    .main-content {
-      max-width: 1100px;
-      margin: 2rem auto;
-      width: 90%;
-    }
+    .main-content { max-width: 1100px; margin: 2rem auto; width: 90%; }
 
     .search-panel {
       background: white;
@@ -80,21 +61,8 @@
     }
 
     .field-group { display: flex; flex-direction: column; }
-    
-    label {
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      color: var(--rpd-blue);
-    }
-
-    input {
-      padding: 0.8rem;
-      border: 2px solid var(--rpd-silver);
-      border-radius: 4px;
-      font-size: 1rem;
-    }
+    label { font-weight: 700; margin-bottom: 0.5rem; text-transform: uppercase; font-size: 0.75rem; color: var(--rpd-blue); }
+    input { padding: 0.8rem; border: 2px solid var(--rpd-silver); border-radius: 4px; font-size: 1rem; }
 
     .btn-search {
       background-color: var(--rpd-blue);
@@ -105,46 +73,22 @@
       font-weight: bold;
       cursor: pointer;
       text-transform: uppercase;
-      transition: background 0.3s;
     }
 
-    .btn-search:hover { background: #003366; }
+    .status-msg { text-align: center; padding: 1rem; font-weight: bold; display: none; }
 
-    .status-msg {
-      text-align: center;
-      padding: 1rem;
-      font-weight: bold;
-      display: none;
-    }
-
-    .results-container {
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 15px rgba(0,0,0,0.1);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
+    .results-container { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 15px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; }
     thead { background-color: var(--rpd-blue); color: white; }
     th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--rpd-silver); }
 
-    footer {
-      text-align: center;
-      padding: 2rem;
-      font-size: 0.8rem;
-      color: #666;
-    }
+    footer { text-align: center; padding: 2rem; font-size: 0.8rem; color: #666; }
   </style>
 </head>
 <body>
 
   <header>
-    <img src="image_6.png" alt="Roma, TX Police Department Official Shield Badge" class="header-logo">
-    
+    <img src="Gemini_Generated_Image_w44b00w44b00w44b-Picsart-BackgroundRemover.jpg" alt="RPD Shield" class="header-logo">
     <h1>CITY OF ROMA POLICE DEPARTMENT</h1>
     <p>Official Warrant Inquiry System | Internal Use Only</p>
   </header>
@@ -197,9 +141,27 @@
   </footer>
 
   <script>
-    // 1. YOUR CONFIGURATION
     const SHEET_ID = '1k_cpfT-NwDUT3-6kAoVwasAOYqaokSpa'; 
     const CSV_URL = `https://docs.google.com/spreadsheets/d/e/2PACX-1vQQPoeUZ2RT_fk_-SV9-vc93gjcdXkhDInrq_GQVCV7x9h-WXTl_NdQSNbz8vHlPQ/pub?gid=742505887&single=true&output=csv`;
+
+    // Función Senior para normalizar fechas (Quita ceros a la izquierda)
+    function normalizeDate(dateStr) {
+      if (!dateStr) return "";
+      
+      // Si la fecha viene de HTML5 (YYYY-MM-DD)
+      if (dateStr.includes('-')) {
+        const [year, month, day] = dateStr.split('-');
+        return `${parseInt(month)}/${parseInt(day)}/${year}`;
+      }
+      
+      // Si la fecha viene de Google Sheets (M/D/YYYY o MM/DD/YYYY)
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        return `${parseInt(parts[0])}/${parseInt(parts[1])}/${parts[2]}`;
+      }
+      
+      return dateStr.trim();
+    }
 
     document.getElementById('searchForm').addEventListener('submit', async function(e) {
       e.preventDefault();
@@ -208,33 +170,39 @@
       const searchFName = document.getElementById('firstName').value.trim().toUpperCase();
       const searchDOB = document.getElementById('dob').value;
       
+      // Normalizamos la fecha que eligió el usuario en el calendario
+      const normalizedSearchDOB = searchDOB ? normalizeDate(searchDOB) : "";
+      
       const status = document.getElementById('statusMsg');
       const resultsBody = document.getElementById('resultsBody');
       
       status.style.display = 'block';
       status.style.color = 'var(--rpd-blue)';
-      status.textContent = "CONNECTING TO SECURE DATABASE...";
+      status.textContent = "QUERYING RECORDS...";
       resultsBody.innerHTML = '';
 
       try {
         const response = await fetch(CSV_URL);
-        if (!response.ok) throw new Error("Could not reach Google Sheets. Check permissions.");
+        if (!response.ok) throw new Error("Database offline. Check sheet permissions.");
         
         const data = await response.text();
         const rows = data.split('\n').map(row => row.split(','));
 
-        // Filtering logic:
-        // Index 1 = Col B (Last Name), Index 2 = Col C (First Name), Index 3 = Col D (DOB)
         const filtered = rows.filter((row, index) => {
-          if (index === 0) return false; // Skip header row
+          if (index === 0) return false; 
           
           const rowLName = (row[1] || '').trim().toUpperCase();
           const rowFName = (row[2] || '').trim().toUpperCase();
-          const rowDOB = (row[3] || '').trim(); // Adjust index if DOB is not in Col D
+          
+          // Normalizamos la fecha que viene de la celda de Google Sheets
+          const rowDOB_Raw = (row[3] || '').trim().replace(/"/g, '');
+          const rowDOB_Normalized = normalizeDate(rowDOB_Raw);
 
           const matchLName = rowLName.includes(searchLName);
           const matchFName = searchFName === "" || rowFName.includes(searchFName);
-          const matchDOB = searchDOB === "" || rowDOB.includes(searchDOB);
+          
+          // Comparación de fechas normalizadas (sin ceros a la izquierda)
+          const matchDOB = searchDOB === "" || rowDOB_Normalized === normalizedSearchDOB;
 
           return matchLName && matchFName && matchDOB;
         });
@@ -242,14 +210,13 @@
         status.style.display = 'none';
 
         if (filtered.length === 0) {
-          resultsBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--danger);">NO MATCHING RECORDS FOUND</td></tr>';
+          resultsBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--danger);">NO RECORDS FOUND</td></tr>';
         } else {
           filtered.forEach(row => {
             const tr = document.createElement('tr');
-            // Show only first 6 columns
             for(let i=0; i<6; i++) {
               const td = document.createElement('td');
-              td.textContent = (row[i] || '').replace(/"/g, ''); // Remove quotes from CSV
+              td.textContent = (row[i] || '').replace(/"/g, '');
               tr.appendChild(td);
             }
             resultsBody.appendChild(tr);
@@ -258,8 +225,7 @@
 
       } catch (error) {
         status.style.color = 'var(--danger)';
-        status.textContent = "ERROR: " + error.message;
-        console.error(error);
+        status.textContent = "SYSTEM ERROR: " + error.message;
       }
     });
   </script>
