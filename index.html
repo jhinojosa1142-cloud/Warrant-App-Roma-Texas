@@ -21,13 +21,41 @@
       min-height: 100vh;
     }
 
+    /* Header actualizado con Flexbox para centrar y alinear logo/texto */
     header {
       background-color: var(--rpd-blue);
       color: white;
-      padding: 1.5rem;
+      padding: 2rem 1.5rem; /* Aumentado padding para dar espacio al logo */
       border-bottom: 4px solid var(--rpd-gold);
-      text-align: center;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* Centra horizontalmente todo el contenido */
+      justify-content: center;
+    }
+
+    /* Estilos específicos para el logo en 3D */
+    .header-logo {
+      max-width: 250px; /* Tamaño máximo para que no sea intrusivo */
+      height: auto; /* Mantiene la proporción 3D */
+      margin-bottom: 1.5rem; /* Espacio entre el logo y el título h1 */
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); /* Sombra para resaltar el 3D */
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      letter-spacing: 1px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    header p {
+      margin: 5px 0 0;
+      opacity: 0.9;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      text-align: center;
     }
 
     .main-content {
@@ -115,6 +143,8 @@
 <body>
 
   <header>
+    <img src="image_6.png" alt="Roma, TX Police Department Official Shield Badge" class="header-logo">
+    
     <h1>CITY OF ROMA POLICE DEPARTMENT</h1>
     <p>Official Warrant Inquiry System | Internal Use Only</p>
   </header>
