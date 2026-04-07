@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RPD Admin | Clear Balance</title>
+  <title>RPD Admin | Management Console</title>
   <style>
     :root {
       --rpd-blue: #002147;
@@ -11,74 +11,151 @@
       --danger: #b00020;
       --success: #2e7d32;
     }
-    body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    .admin-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); width: 100%; max-width: 400px; border-top: 5px solid var(--rpd-blue); }
-    h2 { color: var(--rpd-blue); text-align: center; margin-top: 0; }
-    label { display: block; margin-top: 1rem; font-weight: bold; font-size: 0.8rem; }
-    input { width: 100%; padding: 0.8rem; margin-top: 0.3rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    .btn-clear { width: 100%; background: var(--danger); color: white; border: none; padding: 1rem; margin-top: 1.5rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-    .btn-clear:disabled { background: #ccc; }
-    #msg { margin-top: 1rem; text-align: center; font-weight: bold; font-size: 0.9rem; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+    .admin-container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-top: 5px solid var(--rpd-blue); overflow: hidden; }
+    .header { background: var(--rpd-blue); color: white; padding: 1.5rem; text-align: center; }
+    .content { padding: 2rem; }
+    
+    label { display: block; margin-top: 1rem; font-weight: bold; font-size: 0.8rem; color: var(--rpd-blue); }
+    input { width: 100%; padding: 0.8rem; margin-top: 0.3rem; border: 2px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
+    
+    .btn-search { width: 100%; background: var(--rpd-blue); color: white; border: none; padding: 1rem; margin-top: 1rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+    
+    /* Panel de Vista Previa */
+    .preview-box { margin-top: 2rem; padding: 1.5rem; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; display: none; }
+    .preview-box h3 { margin-top: 0; color: var(--rpd-blue); border-bottom: 2px solid var(--rpd-gold); padding-bottom: 5px; }
+    .data-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; border-bottom: 1px dashed #ccc; padding-bottom: 4px; }
+    .data-label { font-weight: bold; color: #555; }
+
+    .action-zone { margin-top: 1.5rem; display: none; }
+    .btn-clear { width: 100%; background: var(--danger); color: white; border: none; padding: 1.2rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 1rem; }
+    
+    #statusMsg { margin-top: 1rem; text-align: center; font-weight: bold; }
+    .back-link { display: block; text-align: center; margin-top: 2rem; color: var(--rpd-blue); text-decoration: none; font-size: 0.8rem; }
   </style>
 </head>
 <body>
 
-<div class="admin-card">
-  <h2>RPD Admin Panel</h2>
-  <p style="font-size: 0.8rem; color: #666; text-align: center;">Set Balance to $0.00</p>
-  
-  <form id="adminForm">
-    <label>WARRANT ID (Column A)</label>
-    <input type="text" id="warrantId" placeholder="Enter ID exactly" required>
-    
-    <label>ADMIN PASSWORD</label>
-    <input type="password" id="adminPass" required>
-    
-    <button type="submit" class="btn-clear" id="submitBtn">Clear Balance & Close Case</button>
-  </form>
-  
-  <div id="msg"></div>
-  <a href="index.html" style="display:block; text-align:center; margin-top:1rem; font-size:0.8rem; color: var(--rpd-blue);">Back to Search</a>
+<div class="admin-container">
+  <div class="header">
+    <h2 style="margin:0">Admin Management</h2>
+    <p style="margin:5px 0 0; font-size: 0.8rem; opacity:0.8">Search & Modify Warrant Records</p>
+  </div>
+
+  <div class="content">
+    <div id="searchStep">
+      <label>WARRANT ID (Column A)</label>
+      <input type="text" id="warrantId" placeholder="Ex: 2024-001" required>
+      <button type="button" class="btn-search" onclick="lookupWarrant()">Find Record</button>
+    </div>
+
+    <div id="previewBox" class="preview-box">
+      <h3>Record Found</h3>
+      <div id="previewContent"></div>
+      
+      <div class="action-zone" id="actionZone">
+        <label>ADMIN PASSWORD</label>
+        <input type="password" id="adminPass" placeholder="Enter password to authorize">
+        <button type="button" class="btn-clear" onclick="processPayment()">Clear Balance ($0.00)</button>
+      </div>
+    </div>
+
+    <div id="statusMsg"></div>
+    <a href="index.html" class="back-link">← Return to Public Search</a>
+  </div>
 </div>
 
 <script>
-  // PEGA AQUÍ LA URL QUE COPIASTE DEL APPS SCRIPT
+  // CONFIGURACIÓN (REEMPLAZA ESTOS DATOS)
+  const SHEET_ID = '1k_cpfT-NwDUT3-6kAoVwasAOYqaokSpa
+'; 
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzbJun6qFbl1tkUxc41r2YSVbRxU8-10NsYuWln0m4ZrjY6SDHwBAwipwJ3dglZ74dgNA/exec';
+  const CSV_URL = `https://docs.google.com/spreadsheets/d/e/2PACX-1vQQPoeUZ2RT_fk_-SV9-vc93gjcdXkhDInrq_GQVCV7x9h-WXTl_NdQSNbz8vHlPQ/pub?gid=742505887&single=true&output=csv
+`;
 
-  document.getElementById('adminForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const btn = document.getElementById('submitBtn');
-    const msg = document.getElementById('msg');
-    const warrantId = document.getElementById('warrantId').value.trim();
-    const password = document.getElementById('adminPass').value;
+  let currentWarrant = null;
 
-    if(!confirm(`Are you sure you want to set balance to $0 for ID: ${warrantId}?`)) return;
+  // Función para buscar en el CSV (igual que en index.html)
+  async function lookupWarrant() {
+    const idToFind = document.getElementById('warrantId').value.trim();
+    const statusMsg = document.getElementById('statusMsg');
+    const previewBox = document.getElementById('previewBox');
+    const previewContent = document.getElementById('previewContent');
+    const actionZone = document.getElementById('actionZone');
 
-    btn.disabled = true;
-    msg.style.color = "blue";
-    msg.textContent = "Updating database...";
+    if (!idToFind) return;
+
+    statusMsg.style.color = "blue";
+    statusMsg.textContent = "Searching...";
+    previewBox.style.display = "none";
 
     try {
-      const response = await fetch(SCRIPT_URL, {
+      const response = await fetch(CSV_URL);
+      const csvData = await response.text();
+      const lines = csvData.split(/\r?\n/);
+      
+      // Buscar la fila por ID (Columna A - índice 0)
+      let foundRow = null;
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // Parser robusto
+        if (cols[0] && cols[0].replace(/"/g, '').trim() === idToFind) {
+          foundRow = cols.map(c => c.replace(/"/g, '').trim());
+          break;
+        }
+      }
+
+      if (foundRow) {
+        currentWarrant = foundRow[0];
+        statusMsg.textContent = "";
+        previewBox.style.display = "block";
+        actionZone.style.display = "block";
+        
+        previewContent.innerHTML = `
+          <div class="data-row"><span class="data-label">Name:</span> <span>${foundRow[2]} ${foundRow[1]}</span></div>
+          <div class="data-row"><span class="data-label">DOB:</span> <span>${foundRow[3]}</span></div>
+          <div class="data-row"><span class="data-label">Violation:</span> <span>${foundRow[5]}</span></div>
+          <div class="data-row"><span class="data-label">Current Balance:</span> <span style="color:red; font-weight:bold">$${foundRow[8]}</span></div>
+        `;
+      } else {
+        statusMsg.style.color = "red";
+        statusMsg.textContent = "Warrant ID not found in database.";
+      }
+    } catch (e) {
+      statusMsg.textContent = "Error accessing database.";
+    }
+  }
+
+  // Función para enviar la orden al Apps Script
+  async function processPayment() {
+    const password = document.getElementById('adminPass').value;
+    const statusMsg = document.getElementById('statusMsg');
+
+    if (!password) {
+      alert("Password required");
+      return;
+    }
+
+    if (!confirm("CONFIRM: Set balance to $0.00?")) return;
+
+    statusMsg.style.color = "blue";
+    statusMsg.textContent = "Sending update to Google Sheets...";
+
+    try {
+      await fetch(SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors', // Necesario para Google Apps Script
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ warrantId, password })
+        mode: 'no-cors',
+        body: JSON.stringify({ warrantId: currentWarrant, password: password })
       });
 
-      // Nota: Con 'no-cors' no podemos leer la respuesta exacta, 
-      // pero si no hay error de red, asumimos éxito tras unos segundos.
-      msg.style.color = "var(--success)";
-      msg.textContent = "UPDATE REQUEST SENT SUCCESSFULY";
+      statusMsg.style.color = "green";
+      statusMsg.innerHTML = "SUCCESS: BALANCE CLEARED.<br><small>It may take 30s to reflect in public search.</small>";
+      document.getElementById('previewBox').style.display = "none";
       document.getElementById('warrantId').value = "";
     } catch (error) {
-      msg.style.color = "var(--danger)";
-      msg.textContent = "Error communicating with server.";
-    } finally {
-      btn.disabled = false;
+      statusMsg.style.color = "red";
+      statusMsg.textContent = "Server Error.";
     }
-  });
+  }
 </script>
 
 </body>
