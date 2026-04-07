@@ -21,7 +21,6 @@
     
     .btn-search { width: 100%; background: var(--rpd-blue); color: white; border: none; padding: 1rem; margin-top: 1rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
     
-    /* Panel de Vista Previa */
     .preview-box { margin-top: 2rem; padding: 1.5rem; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; display: none; }
     .preview-box h3 { margin-top: 0; color: var(--rpd-blue); border-bottom: 2px solid var(--rpd-gold); padding-bottom: 5px; }
     .data-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; border-bottom: 1px dashed #ccc; padding-bottom: 4px; }
@@ -39,14 +38,14 @@
 <div class="admin-container">
   <div class="header">
     <h2 style="margin:0">Admin Management</h2>
-    <p style="margin:5px 0 0; font-size: 0.8rem; opacity:0.8">Search & Modify Warrant Records</p>
+    <p style="margin:5px 0 0; font-size: 0.8rem; opacity:0.8">Search & Modify Records</p>
   </div>
 
   <div class="content">
     <div id="searchStep">
       <label>WARRANT ID (Column A)</label>
-      <input type="text" id="warrantId" placeholder="Ex: 2024-001" required>
-      <button type="button" class="btn-search" onclick="lookupWarrant()">Find Record</button>
+      <input type="text" id="warrantId" placeholder="Enter ID exactly" required>
+      <button type="button" id="findBtn" class="btn-search">Find Record</button>
     </div>
 
     <div id="previewBox" class="preview-box">
@@ -55,105 +54,113 @@
       
       <div class="action-zone" id="actionZone">
         <label>ADMIN PASSWORD</label>
-        <input type="password" id="adminPass" placeholder="Enter password to authorize">
-        <button type="button" class="btn-clear" onclick="processPayment()">Clear Balance ($0.00)</button>
+        <input type="password" id="adminPass" placeholder="Enter password">
+        <button type="button" id="clearBtn" class="btn-clear">Clear Balance ($0.00)</button>
       </div>
     </div>
 
     <div id="statusMsg"></div>
-    <a href="index.html" class="back-link">← Return to Public Search</a>
+    <a href="index.html" class="back-link">← Return to Search</a>
   </div>
 </div>
 
 <script>
-  // CONFIGURACIÓN (REEMPLAZA ESTOS DATOS)
+  // --- CONFIGURACIÓN ---
   const SHEET_ID = '1k_cpfT-NwDUT3-6kAoVwasAOYqaokSpa'; 
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzbJun6qFbl1tkUxc41r2YSVbRxU8-10NsYuWln0m4ZrjY6SDHwBAwipwJ3dglZ74dgNA/exec';
   const CSV_URL = `https://docs.google.com/spreadsheets/d/e/2PACX-1vQQPoeUZ2RT_fk_-SV9-vc93gjcdXkhDInrq_GQVCV7x9h-WXTl_NdQSNbz8vHlPQ/pub?gid=742505887&single=true&output=csv`;
 
-  let currentWarrant = null;
+  let currentWarrantID = null;
 
-  // Función para buscar en el CSV (igual que en index.html)
-  async function lookupWarrant() {
-    const idToFind = document.getElementById('warrantId').value.trim();
-    const statusMsg = document.getElementById('statusMsg');
-    const previewBox = document.getElementById('previewBox');
-    const previewContent = document.getElementById('previewContent');
-    const actionZone = document.getElementById('actionZone');
-
-    if (!idToFind) return;
-
-    statusMsg.style.color = "blue";
-    statusMsg.textContent = "Searching...";
-    previewBox.style.display = "none";
-
-    try {
-      const response = await fetch(CSV_URL);
-      const csvData = await response.text();
-      const lines = csvData.split(/\r?\n/);
-      
-      // Buscar la fila por ID (Columna A - índice 0)
-      let foundRow = null;
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // Parser robusto
-        if (cols[0] && cols[0].replace(/"/g, '').trim() === idToFind) {
-          foundRow = cols.map(c => c.replace(/"/g, '').trim());
-          break;
-        }
-      }
-
-      if (foundRow) {
-        currentWarrant = foundRow[0];
-        statusMsg.textContent = "";
-        previewBox.style.display = "block";
-        actionZone.style.display = "block";
-        
-        previewContent.innerHTML = `
-          <div class="data-row"><span class="data-label">Name:</span> <span>${foundRow[2]} ${foundRow[1]}</span></div>
-          <div class="data-row"><span class="data-label">DOB:</span> <span>${foundRow[3]}</span></div>
-          <div class="data-row"><span class="data-label">Violation:</span> <span>${foundRow[5]}</span></div>
-          <div class="data-row"><span class="data-label">Current Balance:</span> <span style="color:red; font-weight:bold">$${foundRow[8]}</span></div>
-        `;
-      } else {
-        statusMsg.style.color = "red";
-        statusMsg.textContent = "Warrant ID not found in database.";
-      }
-    } catch (e) {
-      statusMsg.textContent = "Error accessing database.";
-    }
+  // Función simple para procesar líneas de CSV
+  function parseCSV(text) {
+    const lines = text.split(/\r?\n/);
+    return lines.map(line => {
+      // Esta regex separa por comas pero ignora las comas dentro de comillas
+      const result = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+      return result ? result.map(val => val.replace(/"/g, '').trim()) : [];
+    });
   }
 
-  // Función para enviar la orden al Apps Script
-  async function processPayment() {
-    const password = document.getElementById('adminPass').value;
-    const statusMsg = document.getElementById('statusMsg');
+  // BOTÓN BUSCAR
+  document.getElementById('findBtn').addEventListener('click', async function() {
+    const idInput = document.getElementById('warrantId').value.trim();
+    const status = document.getElementById('statusMsg');
+    const preview = document.getElementById('previewBox');
+    const content = document.getElementById('previewContent');
+    const action = document.getElementById('actionZone');
 
-    if (!password) {
-      alert("Password required");
+    if (!idInput) {
+      alert("Please enter a Warrant ID");
       return;
     }
 
-    if (!confirm("CONFIRM: Set balance to $0.00?")) return;
+    status.innerHTML = "Searching...";
+    status.style.color = "blue";
+    preview.style.display = "none";
 
-    statusMsg.style.color = "blue";
-    statusMsg.textContent = "Sending update to Google Sheets...";
+    try {
+      const resp = await fetch(CSV_URL);
+      if (!resp.ok) throw new Error("Could not connect to Google Sheets");
+      
+      const text = await resp.text();
+      const rows = parseCSV(text);
+      
+      // Buscamos en la Columna A (índice 0)
+      const found = rows.find(r => r[0] === idInput);
+
+      if (found) {
+        currentWarrantID = found[0];
+        status.innerHTML = "";
+        preview.style.display = "block";
+        action.style.display = "block";
+        content.innerHTML = `
+          <div class="data-row"><span class="data-label">Name:</span> <span>${found[2]} ${found[1]}</span></div>
+          <div class="data-row"><span class="data-label">Violation:</span> <span>${found[5]}</span></div>
+          <div class="data-row"><span class="data-label">Current Balance:</span> <span style="color:red; font-weight:bold">$${found[8]}</span></div>
+        `;
+      } else {
+        status.innerHTML = "ID NOT FOUND";
+        status.style.color = "red";
+      }
+    } catch (err) {
+      alert("Error: " + err.message);
+      status.innerHTML = "Connection Error";
+    }
+  });
+
+  // BOTÓN LIMPIAR DEUDA
+  document.getElementById('clearBtn').addEventListener('click', async function() {
+    const pass = document.getElementById('adminPass').value;
+    const status = document.getElementById('statusMsg');
+
+    if (!pass) {
+      alert("Password is required");
+      return;
+    }
+
+    if (!confirm("Are you sure? This will set balance to $0 in the Google Sheet.")) return;
+
+    status.innerHTML = "Updating Google Sheets...";
+    status.style.color = "blue";
 
     try {
       await fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
-        body: JSON.stringify({ warrantId: currentWarrant, password: password })
+        body: JSON.stringify({ warrantId: currentWarrantID, password: pass })
       });
 
-      statusMsg.style.color = "green";
-      statusMsg.innerHTML = "SUCCESS: BALANCE CLEARED.<br><small>It may take 30s to reflect in public search.</small>";
+      status.innerHTML = "SUCCESS: BALANCE CLEARED";
+      status.style.color = "green";
       document.getElementById('previewBox').style.display = "none";
       document.getElementById('warrantId').value = "";
-    } catch (error) {
-      statusMsg.style.color = "red";
-      statusMsg.textContent = "Server Error.";
+      document.getElementById('adminPass').value = "";
+    } catch (err) {
+      alert("Error sending command");
+      status.innerHTML = "Error";
     }
-  }
+  });
 </script>
 
 </body>
