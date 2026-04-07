@@ -38,7 +38,7 @@
 <div class="admin-container">
   <div class="header">
     <h2 style="margin:0">Admin Management</h2>
-    <p style="margin:5px 0 0; font-size: 0.8rem; opacity:0.8">Search & Modify Records</p>
+    <p style="margin:5px 0 0; font-size: 0.8rem; opacity:0.8">Search & Verify Records</p>
   </div>
 
   <div class="content">
@@ -49,13 +49,13 @@
     </div>
 
     <div id="previewBox" class="preview-box">
-      <h3>Record Found</h3>
+      <h3>Record Details</h3>
       <div id="previewContent"></div>
       
       <div class="action-zone" id="actionZone">
         <label>ADMIN PASSWORD</label>
         <input type="password" id="adminPass" placeholder="Enter password">
-        <button type="button" id="clearBtn" class="btn-clear">Clear Balance ($0.00)</button>
+        <button type="button" id="clearBtn" class="btn-clear">Clear Balance to $0.00</button>
       </div>
     </div>
 
@@ -72,17 +72,23 @@
 
   let currentWarrantID = null;
 
-  // Función simple para procesar líneas de CSV
-  function parseCSV(text) {
-    const lines = text.split(/\r?\n/);
-    return lines.map(line => {
-      // Esta regex separa por comas pero ignora las comas dentro de comillas
-      const result = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-      return result ? result.map(val => val.replace(/"/g, '').trim()) : [];
-    });
+  // Parser de CSV Ultra-Robusto (Maneja comillas y saltos de línea)
+  function parseCSV(str) {
+    const arr = [];
+    let quote = false;
+    let row = [""], c = 0;
+    for (let i = 0; i < str.length; i++) {
+      let char = str[i], next = str[i+1];
+      if (char == '"' && quote && next == '"') { row[c] += char; i++; }
+      else if (char == '"') { quote = !quote; }
+      else if (char == ',' && !quote) { row[++c] = ""; }
+      else if (char == '\n' && !quote) { arr.push(row); row = [""], c = 0; }
+      else if (char != '\r') { row[c] += char; }
+    }
+    arr.push(row);
+    return arr;
   }
 
-  // BOTÓN BUSCAR
   document.getElementById('findBtn').addEventListener('click', async function() {
     const idInput = document.getElementById('warrantId').value.trim();
     const status = document.getElementById('statusMsg');
@@ -90,56 +96,56 @@
     const content = document.getElementById('previewContent');
     const action = document.getElementById('actionZone');
 
-    if (!idInput) {
-      alert("Please enter a Warrant ID");
-      return;
-    }
+    if (!idInput) return alert("Please enter a Warrant ID");
 
-    status.innerHTML = "Searching...";
+    status.innerHTML = "Accessing Database...";
     status.style.color = "blue";
     preview.style.display = "none";
 
     try {
       const resp = await fetch(CSV_URL);
-      if (!resp.ok) throw new Error("Could not connect to Google Sheets");
-      
       const text = await resp.text();
       const rows = parseCSV(text);
       
-      // Buscamos en la Columna A (índice 0)
-      const found = rows.find(r => r[0] === idInput);
+      // Limpiamos los datos para evitar espacios invisibles
+      const cleanRows = rows.map(r => r.map(cell => cell.trim()));
+
+      // Buscamos la fila por ID en la primera columna (índice 0)
+      const found = cleanRows.find(r => r[0] === idInput);
 
       if (found) {
         currentWarrantID = found[0];
         status.innerHTML = "";
         preview.style.display = "block";
         action.style.display = "block";
+        
+        // Asignamos las variables verificando que existan en el array
+        const lastName = found[1] || "N/A";
+        const firstName = found[2] || "N/A";
+        const violation = found[5] || "N/A";
+        const balance = found[8] || "0.00"; // Columna I
+
         content.innerHTML = `
-          <div class="data-row"><span class="data-label">Name:</span> <span>${found[2]} ${found[1]}</span></div>
-          <div class="data-row"><span class="data-label">Violation:</span> <span>${found[5]}</span></div>
-          <div class="data-row"><span class="data-label">Current Balance:</span> <span style="color:red; font-weight:bold">$${found[8]}</span></div>
+          <div class="data-row"><span class="data-label">Last Name:</span> <span>${lastName}</span></div>
+          <div class="data-row"><span class="data-label">First Name:</span> <span>${firstName}</span></div>
+          <div class="data-row"><span class="data-label">Violation:</span> <span>${violation}</span></div>
+          <div class="data-row"><span class="data-label">Balance:</span> <span style="color:red; font-weight:bold">$${balance}</span></div>
         `;
       } else {
-        status.innerHTML = "ID NOT FOUND";
+        status.innerHTML = "WARRANT ID NOT FOUND";
         status.style.color = "red";
       }
     } catch (err) {
       alert("Error: " + err.message);
-      status.innerHTML = "Connection Error";
     }
   });
 
-  // BOTÓN LIMPIAR DEUDA
   document.getElementById('clearBtn').addEventListener('click', async function() {
     const pass = document.getElementById('adminPass').value;
     const status = document.getElementById('statusMsg');
 
-    if (!pass) {
-      alert("Password is required");
-      return;
-    }
-
-    if (!confirm("Are you sure? This will set balance to $0 in the Google Sheet.")) return;
+    if (!pass) return alert("Password is required");
+    if (!confirm("CONFIRM: Set balance to $0 for ID " + currentWarrantID + "?")) return;
 
     status.innerHTML = "Updating Google Sheets...";
     status.style.color = "blue";
@@ -151,14 +157,11 @@
         body: JSON.stringify({ warrantId: currentWarrantID, password: pass })
       });
 
-      status.innerHTML = "SUCCESS: BALANCE CLEARED";
+      status.innerHTML = "✅ UPDATE COMMAND SENT";
       status.style.color = "green";
-      document.getElementById('previewBox').style.display = "none";
-      document.getElementById('warrantId').value = "";
-      document.getElementById('adminPass').value = "";
+      setTimeout(() => { location.reload(); }, 3000); // Recarga la página después de 3s
     } catch (err) {
-      alert("Error sending command");
-      status.innerHTML = "Error";
+      alert("Communication Error");
     }
   });
 </script>
