@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RPD Admin | Clear Balance</title>
+  <style>
+    :root {
+      --rpd-blue: #002147;
+      --rpd-gold: #C5A059;
+      --danger: #b00020;
+      --success: #2e7d32;
+    }
+    body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    .admin-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); width: 100%; max-width: 400px; border-top: 5px solid var(--rpd-blue); }
+    h2 { color: var(--rpd-blue); text-align: center; margin-top: 0; }
+    label { display: block; margin-top: 1rem; font-weight: bold; font-size: 0.8rem; }
+    input { width: 100%; padding: 0.8rem; margin-top: 0.3rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    .btn-clear { width: 100%; background: var(--danger); color: white; border: none; padding: 1rem; margin-top: 1.5rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+    .btn-clear:disabled { background: #ccc; }
+    #msg { margin-top: 1rem; text-align: center; font-weight: bold; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<div class="admin-card">
+  <h2>RPD Admin Panel</h2>
+  <p style="font-size: 0.8rem; color: #666; text-align: center;">Set Balance to $0.00</p>
+  
+  <form id="adminForm">
+    <label>WARRANT ID (Column A)</label>
+    <input type="text" id="warrantId" placeholder="Enter ID exactly" required>
+    
+    <label>ADMIN PASSWORD</label>
+    <input type="password" id="adminPass" required>
+    
+    <button type="submit" class="btn-clear" id="submitBtn">Clear Balance & Close Case</button>
+  </form>
+  
+  <div id="msg"></div>
+  <a href="index.html" style="display:block; text-align:center; margin-top:1rem; font-size:0.8rem; color: var(--rpd-blue);">Back to Search</a>
+</div>
+
+<script>
+  // PEGA AQUÍ LA URL QUE COPIASTE DEL APPS SCRIPT
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzbJun6qFbl1tkUxc41r2YSVbRxU8-10NsYuWln0m4ZrjY6SDHwBAwipwJ3dglZ74dgNA/exec';
+
+  document.getElementById('adminForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const btn = document.getElementById('submitBtn');
+    const msg = document.getElementById('msg');
+    const warrantId = document.getElementById('warrantId').value.trim();
+    const password = document.getElementById('adminPass').value;
+
+    if(!confirm(`Are you sure you want to set balance to $0 for ID: ${warrantId}?`)) return;
+
+    btn.disabled = true;
+    msg.style.color = "blue";
+    msg.textContent = "Updating database...";
+
+    try {
+      const response = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors', // Necesario para Google Apps Script
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ warrantId, password })
+      });
+
+      // Nota: Con 'no-cors' no podemos leer la respuesta exacta, 
+      // pero si no hay error de red, asumimos éxito tras unos segundos.
+      msg.style.color = "var(--success)";
+      msg.textContent = "UPDATE REQUEST SENT SUCCESSFULY";
+      document.getElementById('warrantId').value = "";
+    } catch (error) {
+      msg.style.color = "var(--danger)";
+      msg.textContent = "Error communicating with server.";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>
