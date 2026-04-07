@@ -12,17 +12,47 @@
       --success: #2e7d32;
     }
     body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
-    .admin-container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-top: 5px solid var(--rpd-blue); overflow: hidden; }
-    .header { background: var(--rpd-blue); color: white; padding: 1.5rem; text-align: center; }
+    
+    /* Contenedor Principal */
+    .admin-container { max-width: 700px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-top: 5px solid var(--rpd-blue); overflow: hidden; }
+    
+    /* Encabezado con Logos */
+    .header { 
+      background: var(--rpd-blue); 
+      color: white; 
+      padding: 1.5rem; 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; /* Espacia los logos a los lados */
+      gap: 15px;
+    }
+    
+    .header-logo {
+      height: 80px; /* Tamaño controlado para los logos */
+      width: auto;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+
+    .header-titles {
+      text-align: center;
+      flex-grow: 1;
+    }
+
+    .header-titles h2 { margin: 0; font-size: 1.4rem; letter-spacing: 1px; }
+    .header-titles p { margin: 5px 0 0; font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; }
+    
+    /* Contenido */
     .content { padding: 2rem; }
     
     label { display: block; margin-top: 1rem; font-weight: bold; font-size: 0.8rem; color: var(--rpd-blue); }
     input { width: 100%; padding: 0.8rem; margin-top: 0.3rem; border: 2px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
     
-    .btn-search { width: 100%; background: var(--rpd-blue); color: white; border: none; padding: 1rem; margin-top: 1rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+    .btn-search { width: 100%; background: var(--rpd-blue); color: white; border: none; padding: 1rem; margin-top: 1rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: background 0.3s; }
+    .btn-search:hover { background: #003366; }
     
     .preview-box { margin-top: 2rem; padding: 1.5rem; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9; display: none; }
-    .preview-box h3 { margin-top: 0; color: var(--rpd-blue); border-bottom: 2px solid var(--rpd-gold); padding-bottom: 5px; }
+    .preview-box h3 { margin-top: 0; color: var(--rpd-blue); border-bottom: 2px solid var(--rpd-gold); padding-bottom: 5px; font-size: 1.1rem; }
+    
     .data-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; border-bottom: 1px dashed #ccc; padding-bottom: 4px; }
     .data-label { font-weight: bold; color: #555; }
 
@@ -30,21 +60,33 @@
     .btn-clear { width: 100%; background: var(--danger); color: white; border: none; padding: 1.2rem; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 1rem; }
     
     #statusMsg { margin-top: 1rem; text-align: center; font-weight: bold; }
-    .back-link { display: block; text-align: center; margin-top: 2rem; color: var(--rpd-blue); text-decoration: none; font-size: 0.8rem; }
+    .back-link { display: block; text-align: center; margin-top: 2rem; color: var(--rpd-blue); text-decoration: none; font-size: 0.8rem; font-weight: bold; }
+
+    /* Responsive */
+    @media (max-width: 500px) {
+      .header { flex-direction: column; }
+      .header-logo { height: 60px; }
+    }
   </style>
 </head>
 <body>
 
 <div class="admin-container">
   <div class="header">
-    <h2 style="margin:0">Admin Management</h2>
-    <p style="margin:5px 0 0; font-size: 0.8rem; opacity:0.8">Search & Verify Records</p>
+    <img src="Gemini_Generated_Image_w44b00w44b00w44b-Picsart-BackgroundRemover.jpg" alt="RPD Shield" class="header-logo">
+    
+    <div class="header-titles">
+      <h2>ADMIN MANAGEMENT</h2>
+      <p>Search & Verify Judicial Records</p>
+    </div>
+
+    <img src="Image_7.png.png" alt="Texas Municipal Court" class="header-logo">
   </div>
 
   <div class="content">
     <div id="searchStep">
       <label>WARRANT ID (Column A)</label>
-      <input type="text" id="warrantId" placeholder="Enter ID exactly" required>
+      <input type="text" id="warrantId" placeholder="Ex: 2024-1234" required>
       <button type="button" id="findBtn" class="btn-search">Find Record</button>
     </div>
 
@@ -54,25 +96,24 @@
       
       <div class="action-zone" id="actionZone">
         <label>ADMIN PASSWORD</label>
-        <input type="password" id="adminPass" placeholder="Enter password">
+        <input type="password" id="adminPass" placeholder="Authorize with password">
         <button type="button" id="clearBtn" class="btn-clear">Clear Balance to $0.00</button>
       </div>
     </div>
 
     <div id="statusMsg"></div>
-    <a href="index.html" class="back-link">← Return to Search</a>
+    <a href="index.html" class="back-link">← Return to Public Search</a>
   </div>
 </div>
 
 <script>
   // --- CONFIGURACIÓN ---
-  const SHEET_ID = '1k_cpfT-NwDUT3-6kAoVwasAOYqaokSpa'; 
+  const SHEET_ID = '1VifBGQwnIHb-v-B1ilTTVr5GQZ6lVs3O_ezV4BSNtig'; 
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzbJun6qFbl1tkUxc41r2YSVbRxU8-10NsYuWln0m4ZrjY6SDHwBAwipwJ3dglZ74dgNA/exec';
-  const CSV_URL = `https://docs.google.com/spreadsheets/d/e/2PACX-1vQQPoeUZ2RT_fk_-SV9-vc93gjcdXkhDInrq_GQVCV7x9h-WXTl_NdQSNbz8vHlPQ/pub?gid=742505887&single=true&output=csv`;
+  const CSV_URL = `https://docs.google.com/spreadsheets/d/e/2PACX-1vRl55VdvaAOaQ327vnn-RiKT1p8zRbxykTyCKnWXRL9G9T7Onm6vntco8wY0GvUPBX9xiP9m8_4hlS2/pub?gid=0&single=true&output=csv`;
 
   let currentWarrantID = null;
 
-  // Parser de CSV Ultra-Robusto (Maneja comillas y saltos de línea)
   function parseCSV(str) {
     const arr = [];
     let quote = false;
@@ -98,7 +139,7 @@
 
     if (!idInput) return alert("Please enter a Warrant ID");
 
-    status.innerHTML = "Accessing Database...";
+    status.innerHTML = "Accessing Court Database...";
     status.style.color = "blue";
     preview.style.display = "none";
 
@@ -106,11 +147,8 @@
       const resp = await fetch(CSV_URL);
       const text = await resp.text();
       const rows = parseCSV(text);
-      
-      // Limpiamos los datos para evitar espacios invisibles
-      const cleanRows = rows.map(r => r.map(cell => cell.trim()));
+      const cleanRows = rows.map(r => r.map(cell => cell ? cell.trim() : ""));
 
-      // Buscamos la fila por ID en la primera columna (índice 0)
       const found = cleanRows.find(r => r[0] === idInput);
 
       if (found) {
@@ -119,17 +157,11 @@
         preview.style.display = "block";
         action.style.display = "block";
         
-        // Asignamos las variables verificando que existan en el array
-        const lastName = found[1] || "N/A";
-        const firstName = found[2] || "N/A";
-        const violation = found[5] || "N/A";
-        const balance = found[8] || "0.00"; // Columna I
-
         content.innerHTML = `
-          <div class="data-row"><span class="data-label">Last Name:</span> <span>${lastName}</span></div>
-          <div class="data-row"><span class="data-label">First Name:</span> <span>${firstName}</span></div>
-          <div class="data-row"><span class="data-label">Violation:</span> <span>${violation}</span></div>
-          <div class="data-row"><span class="data-label">Balance:</span> <span style="color:red; font-weight:bold">${balance}</span></div>
+          <div class="data-row"><span class="data-label">Last Name:</span> <span>${found[1] || "N/A"}</span></div>
+          <div class="data-row"><span class="data-label">First Name:</span> <span>${found[2] || "N/A"}</span></div>
+          <div class="data-row"><span class="data-label">Violation:</span> <span>${found[5] || "N/A"}</span></div>
+          <div class="data-row"><span class="data-label">Balance:</span> <span style="color:red; font-weight:bold">$${found[8] || "0.00"}</span></div>
         `;
       } else {
         status.innerHTML = "WARRANT ID NOT FOUND";
@@ -147,7 +179,7 @@
     if (!pass) return alert("Password is required");
     if (!confirm("CONFIRM: Set balance to $0 for ID " + currentWarrantID + "?")) return;
 
-    status.innerHTML = "Updating Google Sheets...";
+    status.innerHTML = "Executing update command...";
     status.style.color = "blue";
 
     try {
@@ -157,9 +189,9 @@
         body: JSON.stringify({ warrantId: currentWarrantID, password: pass })
       });
 
-      status.innerHTML = "✅ UPDATE COMMAND SENT";
+      status.innerHTML = "✅ SUCCESS: BALANCE UPDATED";
       status.style.color = "green";
-      setTimeout(() => { location.reload(); }, 3000); // Recarga la página después de 3s
+      setTimeout(() => { location.reload(); }, 3000);
     } catch (err) {
       alert("Communication Error");
     }
