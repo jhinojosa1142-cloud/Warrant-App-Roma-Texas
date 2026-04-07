@@ -3,55 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Official Warrant Inquiry System - City of Roma Police Department">
   <title>RPD | Warrant Search System</title>
   <style>
     :root {
-      --rpd-blue: #002147; /* Midnight Blue */
-      --rpd-gold: #C5A059; /* Police Badge Gold */
+      --rpd-blue: #002147;
+      --rpd-gold: #C5A059;
       --rpd-silver: #e0e0e0;
       --danger: #b00020;
-      --success: #2e7d32;
       --text-dark: #1a1a1a;
     }
 
     body {
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Segoe UI', system-ui, sans-serif;
       background-color: #f0f2f5;
       color: var(--text-dark);
       margin: 0;
-      display: flex;
-      flex-direction: column;
       min-height: 100vh;
     }
 
-    /* Institutional Header */
     header {
       background-color: var(--rpd-blue);
       color: white;
       padding: 1.5rem;
       border-bottom: 4px solid var(--rpd-gold);
       text-align: center;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
 
-    header h1 { margin: 0; font-size: 1.8rem; letter-spacing: 1px; font-weight: 800; }
-    header p { margin: 5px 0 0; opacity: 0.9; font-size: 0.9rem; text-transform: uppercase; }
-
     .main-content {
-      flex: 1;
       max-width: 1100px;
       margin: 2rem auto;
       width: 90%;
     }
 
-    /* Search Panel */
     .search-panel {
       background: white;
       border-radius: 8px;
       padding: 2rem;
       box-shadow: 0 2px 15px rgba(0,0,0,0.1);
       border-left: 5px solid var(--rpd-blue);
+      margin-bottom: 2rem;
     }
 
     .search-grid {
@@ -74,13 +64,6 @@
       padding: 0.8rem;
       border: 2px solid var(--rpd-silver);
       border-radius: 4px;
-      font-size: 1rem;
-      transition: border-color 0.3s;
-    }
-
-    input:focus {
-      outline: none;
-      border-color: var(--rpd-gold);
     }
 
     .btn-search {
@@ -92,53 +75,25 @@
       font-weight: bold;
       cursor: pointer;
       text-transform: uppercase;
-      transition: background 0.3s;
-      align-self: flex-end;
-    }
-
-    .btn-search:hover { background-color: #003366; }
-
-    /* Results Table */
-    .results-container {
-      margin-top: 2rem;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 15px rgba(0,0,0,0.1);
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
     }
 
     thead { background-color: var(--rpd-blue); color: white; }
+    th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--rpd-silver); }
 
-    th { padding: 1rem; text-align: left; text-transform: uppercase; font-size: 0.85rem; }
-
-    td { padding: 1rem; border-bottom: 1px solid var(--rpd-silver); }
-
-    tr:nth-child(even) { background-color: #f9f9f9; }
-
-    .badge {
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      text-transform: uppercase;
-    }
-
-    .badge-active { background-color: #ffd7d7; color: var(--danger); border: 1px solid var(--danger); }
-
-    footer {
+    .loader {
+      display: none;
       text-align: center;
       padding: 2rem;
-      font-size: 0.8rem;
-      color: #666;
-    }
-
-    @media (max-width: 600px) {
-      .btn-search { align-self: stretch; margin-top: 1rem; }
+      font-weight: bold;
+      color: var(--rpd-blue);
     }
   </style>
 </head>
@@ -146,7 +101,7 @@
 
   <header>
     <h1>CITY OF ROMA POLICE DEPARTMENT</h1>
-    <p>Official Warrant Inquiry & Record System</p>
+    <p>Warrant Inquiry System | Internal Use Only</p>
   </header>
 
   <main class="main-content">
@@ -155,59 +110,94 @@
         <div class="search-grid">
           <div class="field-group">
             <label for="firstName">First Name</label>
-            <input type="text" id="firstName" name="firstName" placeholder="e.g. John" autocomplete="off" required>
+            <input type="text" id="firstName" required>
           </div>
           <div class="field-group">
             <label for="lastName">Last Name</label>
-            <input type="text" id="lastName" name="lastName" placeholder="e.g. Doe" autocomplete="off" required>
+            <input type="text" id="lastName" required>
           </div>
           <div class="field-group">
             <label for="dob">Date of Birth</label>
-            <input type="date" id="dob" name="dob" required>
+            <input type="date" id="dob" required>
           </div>
-          <button type="submit" class="btn-search">Search Records</button>
+          <button type="submit" class="btn-search">Run Query</button>
         </div>
       </form>
     </section>
 
-    <section class="results-container" aria-live="polite">
-      <table id="outputTable">
+    <div id="loader" class="loader">ACCESSING SECURE DATABASE...</div>
+
+    <section style="overflow-x: auto;">
+      <table id="resultsTable">
         <thead>
           <tr>
-            <th scope="col">Case Number</th>
-            <th scope="col">Subject Name</th>
-            <th scope="col">D.O.B.</th>
-            <th scope="col">Charge / Offense</th>
-            <th scope="col">Status</th>
+            <th>Warrant #</th>
+            <th>Subject</th>
+            <th>D.O.B.</th>
+            <th>Charge</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody id="resultsBody">
-          <tr>
-            <td colspan="5" style="text-align: center; padding: 3rem; color: #666;">
-              Please enter subject criteria to query the central database.
-            </td>
-          </tr>
+          <tr><td colspan="5" style="text-align:center;">Enter subject details to begin.</td></tr>
         </tbody>
       </table>
     </section>
   </main>
 
-  <footer>
-    Compliance Officer: City of Roma, TX - Police Dept &copy; 2026. <br>
-    <strong>Law Enforcement Sensitive (LES) - Unauthorized access is prohibited.</strong>
-  </footer>
-
   <script>
-    // Logic for Google Sheets API integration
+    // 1. CONFIGURATION
+    const SHEET_ID = '1k_cpfT-NwDUT3-6kAoVwasAOYqaokSpa'; // Replace with your actual ID
+    const SHEET_NAME = 'Sheet1'; // Name of the tab in Google Sheets
+
     document.getElementById('searchForm').addEventListener('submit', function(e) {
       e.preventDefault();
       
+      const fName = document.getElementById('firstName').value.toUpperCase();
+      const lName = document.getElementById('lastName').value.toUpperCase();
+      const dob = document.getElementById('dob').value;
+      
+      const loader = document.getElementById('loader');
       const resultsBody = document.getElementById('resultsBody');
-      resultsBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Querying secure server...</td></tr>';
+      
+      loader.style.display = 'block';
+      resultsBody.innerHTML = '';
 
-      // Implementation Note: Use Google Visualization API Query Language 
-      // to handle 10,000+ rows efficiently without crashing the browser.
-      console.log("Executing SQL-like query on Google Sheets...");
+      // 2. THE QUERY (SQL-style)
+      // Change column letters (A, B, C) to match your Sheet columns
+      // Example: A=WarrantID, B=FirstName, C=LastName, D=DOB, E=Charge, F=Status
+      const query = encodeURIComponent(`SELECT A, B, C, D, E, F WHERE (upper(B) contains '${fName}' AND upper(C) contains '${lName}') OR D = date '${dob}'`);
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=${query}&sheet=${SHEET_NAME}`;
+
+      fetch(url)
+        .then(res => res.text())
+        .then(data => {
+          // Remove Google's JSON wrapper
+          const json = JSON.parse(data.substring(47, data.length - 2));
+          const rows = json.table.rows;
+          
+          loader.style.display = 'none';
+          
+          if (rows.length === 0) {
+            resultsBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">NO RECORDS FOUND</td></tr>';
+            return;
+          }
+
+          rows.forEach(row => {
+            const tr = document.createElement('tr');
+            row.c.forEach(cell => {
+              const td = document.createElement('td');
+              td.textContent = cell ? cell.v : '';
+              tr.appendChild(td);
+            });
+            resultsBody.appendChild(tr);
+          });
+        })
+        .catch(err => {
+          loader.style.display = 'none';
+          resultsBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Error connecting to database.</td></tr>';
+          console.error(err);
+        });
     });
   </script>
 </body>
